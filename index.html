@@ -1,0 +1,120 @@
+<html>
+	<head>
+		<style>
+			body {
+				background-color: #111;
+			}
+		</style>
+	</head>
+	<body>
+		<input type="range" style="width:800px" min="-0.007" max="0.007" step="0.0001">
+		<br>
+		<input type="range" style="width:800px" min="0" max="10" step="0.001" value="0">
+		<br>
+		<canvas width="800" height="600"></canvas>
+	</body>
+</html>
+<script>
+
+const canvas = document.querySelector('canvas');
+const ctx = canvas.getContext('2d');
+
+let bending_ratio = 0;
+let dt = 1;
+let min_dist = 500;
+let offset = 0;
+let mx = -10;
+let my = -10;
+
+const dist = ([ ax, ay ], [ bx, by ]) => {
+	const dx = bx - ax;
+	const dy = by - ay;
+	return Math.sqrt(dx**2 + dy**2);
+};
+
+const normalize = ([ x, y ]) => {
+	const len = Math.sqrt(x**2 + y**2);
+	return [ x/len, y/len ];
+};
+
+const shoot = (start, dir) => {
+	let [ x, y ] = start;
+	ctx.beginPath();
+	ctx.moveTo(x, y);
+	while (dist(start, [ x, y ]) < min_dist) {
+		dir[1] += bending_ratio * dt;
+		dir = normalize(dir);
+		const [ dirx, diry ] = dir;
+		x += dirx * dt;
+		y += diry * dt;
+		if (x < 0 || x > canvas.width) {
+			break;
+		}
+		if (y < 0 || y > canvas.height) {
+			break;
+		}
+		ctx.lineTo(x, y);
+	}
+	ctx.stroke();
+};
+
+const spread = (start) => {
+	for (let i=0; i<360; i+=10) {
+		const angle = (i + offset)/360 * Math.PI * 2;
+		const dx = Math.cos(angle);
+		const dy = Math.sin(angle);
+		shoot(start, [ dx, dy ]);
+	}
+};
+
+const clear = () => {
+	ctx.fillStyle = '#222';
+	ctx.fillRect(0, 0, canvas.width, canvas.height);
+};
+
+const update = () => {
+	clear();
+	ctx.strokeStyle = '#f70';
+	ctx.fillStyle = '#fff';
+	ctx.lineWidth = 2;
+
+	const mid = [ canvas.width/2, canvas.height/2 ];
+	spread(mid);
+
+	ctx.strokeStyle = '#fff';
+
+	ctx.beginPath();
+	ctx.moveTo(0, canvas.height * 0.6);
+	ctx.lineTo(canvas.width, canvas.height * 0.6);
+	ctx.stroke();
+
+	ctx.beginPath();
+	ctx.arc(mx, my, 3, 0, Math.PI*2);
+	ctx.fill();
+
+	ctx.beginPath();
+	ctx.arc(...mid, 3, 0, Math.PI*2);
+	ctx.fill();
+};
+
+document.querySelectorAll('input')[0].oninput = function() {
+	bending_ratio = Number(this.value);
+};
+
+document.querySelectorAll('input')[1].oninput = function() {
+	offset = Number(this.value);
+};
+
+canvas.ondblclick = function(e) {
+	mx = e.offsetX;
+	my = e.offsetY;
+};
+
+const frameLoop = () => {
+	update();
+	requestAnimationFrame(frameLoop);
+};
+
+frameLoop();
+
+</script>
